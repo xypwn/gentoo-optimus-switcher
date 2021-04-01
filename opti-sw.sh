@@ -4,7 +4,7 @@
 
 usage() {
     echo "Usage:"
-    echo "  nvidia-switch.sh (i)ntel | (n)vidia"
+    echo "  opti-sw.sh (i)ntel | (n)vidia"
 }
 
 checkinst() {
