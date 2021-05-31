@@ -43,6 +43,8 @@ case $1 in
 	    echo "Backed up existing XOrg config file /etc/X11/xorg.conf to /etc/X11/xorg.conf.nvidia"
 	echo " " > ~/.local/lib/nvidia-switch-rc.sh
 
+	su_run "sed -i '/^nvidia$/d' /etc/modules-load.d/video.conf"
+
 	echo "Switched to Intel GPU"
 	;;
     n|nvidia)
@@ -53,7 +55,7 @@ case $1 in
 	echo -e "xrandr --setprovideroutputsource modesetting NVIDIA-0\nxrandr --auto" > ~/.local/lib/nvidia-switch-rc.sh
 
 	su_run "mkdir -p /etc/modules-load.d"
-	su_run "echo nvidia > /etc/modules-load.d/video.conf"
+	grep '^nvidia$' /etc/modules-load.d/video.conf > /dev/null || su_run "echo nvidia >> /etc/modules-load.d/video.conf"
 
 	echo "Switched to NVIDIA GPU. You will probably need to restart."
 	;;
