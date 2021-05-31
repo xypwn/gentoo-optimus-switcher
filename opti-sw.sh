@@ -34,29 +34,30 @@ rc_msg() {
     printf "\n\n"
     echo "If you haven't done so already, please put the following line at the top of your display manager or XOrg init script (for example ~/.xinitrc for startx or /usr/share/sddm/scripts/Xsetup for SDDM):"
     echo "sh $HOME/.local/lib/nvidia-switch-rc.sh"
-    printf "%${TERM_WIDTH}s" | tr " " "_"
+    printf "%${TERM_WIDTH}s\n" | tr " " "_"
 }
 
 # Make suspend work for NVIDIA
 install_nvidia_suspend_script() {
 	[ ! -d /lib64/elogind/system-sleep/ ] &&
-		echo "Unable to install NVIDIA suspend script: /lib64/elogind/system-sleep/ not found. This might be because you aren't using elogind."
+		echo "Unable to install NVIDIA suspend script: /lib64/elogind/system-sleep/ not found. This might be because you aren't using elogind." &&
+		return 1
 
-	sudo sh -c "echo '#!/usr/bin/env sh'                         > $SUSPEND_SCRIPT"
-	sudo sh -c "echo '# Managed by opti-sw.sh'                   >> $SUSPEND_SCRIPT"
-	sudo sh -c "echo 'lsmod | grep \"^nvidia\" || exit 0'        >> $SUSPEND_SCRIPT"
-	sudo sh -c "echo 'WHEN=\"\$1\"'                              >> $SUSPEND_SCRIPT"
-	sudo sh -c "echo 'WHAT=\"\$2\"'                              >> $SUSPEND_SCRIPT"
-	sudo sh -c "echo 'if [ pre = \"\$WHEN\" ]; then'             >> $SUSPEND_SCRIPT"
-	sudo sh -c "echo '	if [ suspend = \"\$WHAT\" ]; then'       >> $SUSPEND_SCRIPT"
-	sudo sh -c "echo '		/usr/bin/nvidia-sleep.sh suspend'    >> $SUSPEND_SCRIPT"
-	sudo sh -c "echo '	else'                                    >> $SUSPEND_SCRIPT"
-	sudo sh -c "echo '		/usr/bin/nvidia-sleep.sh hibernate'  >> $SUSPEND_SCRIPT"
-	sudo sh -c "echo '	fi'                                      >> $SUSPEND_SCRIPT"
-	sudo sh -c "echo 'elif [ post = \"\$WHEN\" ]; then'          >> $SUSPEND_SCRIPT"
-	sudo sh -c "echo '	sleep 1'                                 >> $SUSPEND_SCRIPT"
-	sudo sh -c "echo '	/usr/bin/nvidia-sleep.sh resume &'       >> $SUSPEND_SCRIPT"
-	sudo sh -c "echo 'fi'                                        >> $SUSPEND_SCRIPT"
+	sudo sh -c "echo '#!/usr/bin/env sh
+# Managed by opti-sw.sh
+lsmod | cut -d\" \" -f1 | grep \"^nvidia\$\" > /dev/null || exit 0
+WHEN=\"\$1\"
+WHAT=\"\$2\"
+if [ pre = \"\$WHEN\" ]; then
+	if [ suspend = \"\$WHAT\" ]; then
+		/usr/bin/nvidia-sleep.sh suspend
+	else
+		/usr/bin/nvidia-sleep.sh hibernate
+	fi
+elif [ post = \"\$WHEN\" ]; then
+	sleep 1
+	/usr/bin/nvidia-sleep.sh resume &
+fi' > $SUSPEND_SCRIPT"
 
 	sudo chmod +x $SUSPEND_SCRIPT
 }
@@ -81,8 +82,11 @@ case $OPT in
 
 		# Make suspend work
 		[ ! -e "$SUSPEND_SCRIPT" ] && install_nvidia_suspend_script && echo "Installed $SUSPEND_SCRIPT to make suspend work on NVIDIA"
+
 		echo "Switched to NVIDIA GPU. You will probably need to restart."
 		;;
 esac
 
 [ ! -e ~/.local/lib/nvidia-switch-rc.sh ] && mkdir -p ~/.local/lib/ && touch ~/.local/lib/nvidia-switch-rc.sh && chmod +x ~/.local/lib/nvidia-switch-rc.sh
+
+exit 0
